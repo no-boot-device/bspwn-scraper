@@ -56,7 +56,7 @@ function patch(target, resolve) {
             archive.pipe(output);
             archive.directory(path, 'core');
             archive.file(__dirname + '/files/index.js', { name: 'index.js' });
-            archive.file(target + '/package.json', { name: 'package.json' });
+            archive.file(config.target + '/package.json', { name: 'package.json' });
             archive.finalize();
 
             //output.close(resolve);
