@@ -1,0 +1,204 @@
+<!--
+
+    EndPwn3.2 Updater
+    
+    Copyright 2018 EndPwn Project
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+    
+    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    https://github.com/endpwn/
+
+-->
+
+<html>
+
+<head>
+
+    <script src="glslsandbox.js"></script>
+
+    <script id="shaderCode" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        uniform float time;
+        uniform vec2 mouse;
+        uniform vec2 resolution;
+
+        vec3 h() {
+	        vec2 pos = ( gl_FragCoord.xy / resolution.xy ) - vec2(0.5,0.5);	
+            float horizon = 0.0;
+               float fov = 0.5; 
+	        float scaling = 0.1;
+
+	        vec3 p = vec3(pos.x, fov, pos.y - horizon);      
+	        vec2 s = vec2(p.x/p.z, p.y/p.z + 2.0 * time * sign(p.z)) * scaling;
+	
+	        //checkboard texture
+	        float color = sign((mod(s.x, 0.1) - 0.05) * (mod(s.y, 0.1) - 0.05));	
+	        //fading
+	        color *= p.z*p.z*10.0;
+	        color = clamp(color,0.0,1.0);
+	        color /= 2.0;
+	        return vec3(0.0,color,color); // made this cyan to differentiate between 3.1 and 3.2
+        }
+        void main( void ) {
+	
+	        gl_FragColor = vec4( h(), 1.0 );
+
+        }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        uniform vec2 resolution;
+        uniform sampler2D texture;
+
+        void main() {
+
+            vec2 uv = gl_FragCoord.xy / resolution.xy;
+            gl_FragColor = texture2D( texture, uv );
+
+        }
+
+    </script>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+
+        attribute vec3 position;
+
+        void main() {
+
+            gl_Position = vec4( position, 1.0 );
+
+        }
+
+    </script>
+
+    <script id="surfaceVertexShader" type="x-shader/x-vertex">
+
+        attribute vec3 position;
+        attribute vec2 surfacePosAttrib;
+        varying vec2 surfacePosition;
+
+        void main() {
+
+            surfacePosition = surfacePosAttrib;
+            gl_Position = vec4( position, 1.0 );
+
+        }
+
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background-color: #2f3136;
+            color: #ffffff
+        }
+
+        div {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(to bottom right, #0ff, #f0f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 96px;
+        }
+
+        span {
+            position: absolute;
+            top: 0%;
+            left: 50%;
+            transform: translate(-50%, 0%);
+            color: #f00;
+            font-size: 16px;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            z-index: -1;
+        }
+    </style>
+
+    <script>
+
+        // wait until DOM is ready so that error messages can display properly
+        window.onload = () => {
+
+            init();
+            if (gl) animate();
+
+            setTimeout(async () => {
+
+                try {
+
+                    window.electron = require('electron').remote;
+                    window.fs = require('original-fs');
+
+                    const data = electron.app.getPath('userData');
+
+                    // TODO: make this...not constant
+                    const approot = 'https://ep3staging.dr1ft.xyz';
+
+                    // continue to discord
+                    function load() {
+                        var branch = DiscordNative.globals.releaseChannel;
+                        electron.getCurrentWindow().loadURL('https://' + (branch != 'stable' && branch != 'development' ? branch + '.' : '') + 'discordapp.com/channels/@me');
+                    }
+
+                    // make the plugins and styles dirs if they dont exist
+                    if (!fs.existsSync(data + '/plugins')) fs.mkdirSync(data + '/plugins');
+                    if (!fs.existsSync(data + '/styles')) fs.mkdirSync(data + '/styles');
+
+                    // dont update stuff if DONTUPDATE exists
+                    if (!fs.existsSync(data + '/DONTUPDATE')) {
+
+                        // get files 
+                        fs.writeFileSync(data + '/epapi.js', await (await fetch('https://endpwn.github.io/epapi/epapi.js?_=' + Date.now())).text());
+                        fs.writeFileSync(data + '/crispr.js', await (await fetch('https://endpwn.github.io/crispr/crispr.js?_=' + Date.now())).text());
+                        fs.writeFileSync(data + '/plugins/system.js', await (await fetch(approot + '/plugin/system.js?_=' + Date.now())).text());
+                        fs.writeFileSync(data + '/plugins/customizer.js', await (await fetch(approot + '/plugin/customizer.js?_=' + Date.now())).text());
+                        fs.writeFileSync(data + '/plugins/settings.js', await (await fetch(approot + '/plugin/settings.js?_=' + Date.now())).text());
+                        fs.writeFileSync(data + '/styles/system.css', await (await fetch(approot + '/plugin/system.css?_=' + Date.now())).text());
+
+                    }
+
+                    setTimeout(load, 1000);
+
+                }
+                catch (ex) {
+                    console.error(ex);
+                    alert('Updater failed. Check the console for details.', 'EndPwn3.2');
+                }
+
+            }, 500);
+
+        };
+
+    </script>
+
+</head>
+
+<body>
+    <div>&Sigma;ndPwn&sup3;</div>
+</body>
+
+</html>
