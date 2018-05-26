@@ -51,12 +51,12 @@ function patch(target, resolve) {
             console.log('zipping it all up...');
             var archive = archiver('zip');
 
-            var output = fs.createWriteStream(config.target || './' + target + '.zip');
+            var output = fs.createWriteStream((config.target || './') + target + '.zip');
 
             archive.pipe(output);
             archive.directory(path, 'core');
             archive.file(__dirname + '/files/index.js', { name: 'index.js' });
-            archive.file(config.target + '/package.json', { name: 'package.json' });
+            archive.file(target + '/package.json', { name: 'package.json' });
             archive.finalize();
 
             //output.close(resolve);
